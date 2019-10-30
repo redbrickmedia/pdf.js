@@ -29,7 +29,8 @@
   position: absolute;
   white-space: pre;
   cursor: text;
-  transform-origin: 0% 0%;
+  -webkit-transform-origin: 0% 0%;
+          transform-origin: 0% 0%;
 }
 
 .textLayer .highlight {
@@ -178,11 +179,13 @@
 }
 
 .annotationLayer .buttonWidgetAnnotation.checkBox input:checked:before {
-  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+          transform: rotate(45deg);
 }
 
 .annotationLayer .buttonWidgetAnnotation.checkBox input:checked:after {
-  transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+          transform: rotate(-45deg);
 }
 
 .annotationLayer .buttonWidgetAnnotation.radioButton input:checked:before {
@@ -812,9 +815,6 @@ html[dir='rtl'] .findbar {
 #findInput::-webkit-input-placeholder {
   color: hsl(0, 0%, 75%);
 }
-#findInput::-moz-placeholder {
-  font-style: italic;
-}
 #findInput:-ms-input-placeholder {
   font-style: italic;
 }
@@ -931,7 +931,8 @@ html[dir='ltr'] .doorHangerRight:before {
 #toolbarViewerMiddle {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  -webkit-transform: translateX(-50%);
+          transform: translateX(-50%);
 }
 
 html[dir='ltr'] #toolbarViewerLeft,
@@ -2048,12 +2049,14 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
 @media screen and (-webkit-min-device-pixel-ratio: 1.1), screen and (min-resolution: 1.1dppx) {
   /* Rules for Retina screens */
   .toolbarButton::before {
-    transform: scale(0.5);
+    -webkit-transform: scale(0.5);
+            transform: scale(0.5);
     top: -5px;
   }
 
   .secondaryToolbarButton::before {
-    transform: scale(0.5);
+    -webkit-transform: scale(0.5);
+            transform: scale(0.5);
     top: -4px;
   }
 
@@ -2227,7 +2230,8 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
   }
 
   .outlineItemToggler::before {
-    transform: scale(0.5);
+    -webkit-transform: scale(0.5);
+            transform: scale(0.5);
     top: -1px;
     content: url(images/treeitem-expanded@2x.png);
   }
@@ -2321,7 +2325,8 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
     margin: auto;
     left: auto;
     position: inherit;
-    transform: none;
+    -webkit-transform: none;
+            transform: none;
   }
 }
 
