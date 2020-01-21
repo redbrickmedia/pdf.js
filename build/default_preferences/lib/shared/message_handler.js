@@ -43,12 +43,16 @@ function makeReasonSerializable(reason) {
   return new _util.UnknownErrorException(reason.message, reason.toString());
 }
 
-function resolveOrReject(capability, data) {
-  if (data.success) {
+function resolveOrReject(capability, success, reason) {
+  if (success) {
     capability.resolve();
   } else {
-    capability.reject(wrapReason(data.reason));
+    capability.reject(reason);
   }
+}
+
+function finalize(promise) {
+  return Promise.resolve(promise).catch(() => {});
 }
 
 function MessageHandler(sourceName, targetName, comObj) {
@@ -335,7 +339,7 @@ MessageHandler.prototype = {
 
     let deleteStreamController = () => {
       Promise.all([this.streamControllers[data.streamId].startCall, this.streamControllers[data.streamId].pullCall, this.streamControllers[data.streamId].cancelCall].map(function (capability) {
-        return capability && capability.promise.catch(function () {});
+        return capability && finalize(capability.promise);
       })).then(() => {
         delete this.streamControllers[data.streamId];
       });
@@ -343,11 +347,11 @@ MessageHandler.prototype = {
 
     switch (data.stream) {
       case 'start_complete':
-        resolveOrReject(this.streamControllers[data.streamId].startCall, data);
+        resolveOrReject(this.streamControllers[data.streamId].startCall, data.success, wrapReason(data.reason));
         break;
 
       case 'pull_complete':
-        resolveOrReject(this.streamControllers[data.streamId].pullCall, data);
+        resolveOrReject(this.streamControllers[data.streamId].pullCall, data.success, wrapReason(data.reason));
         break;
 
       case 'pull':
@@ -406,7 +410,7 @@ MessageHandler.prototype = {
         break;
 
       case 'cancel_complete':
-        resolveOrReject(this.streamControllers[data.streamId].cancelCall, data);
+        resolveOrReject(this.streamControllers[data.streamId].cancelCall, data.success, wrapReason(data.reason));
         deleteStreamController();
         break;
 

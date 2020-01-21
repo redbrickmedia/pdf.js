@@ -438,7 +438,7 @@ function getPDFFileNameFromURL(url, defaultFilename = 'document.pdf') {
   }
 
   const reURI = /^(?:(?:[^:]+:)?\/\/[^\/]+)?([^?#]*)(\?[^#]*)?(#.*)?$/;
-  const reFilename = /[^\/?#=]+\.pdf\b(?!.*\.pdf\b)/i;
+  const reFilename = /[^(\/|\\)?#=]+\.pdf\b(?!.*\.pdf\b)/i;
   let splitURI = reURI.exec(url);
   let suggestedFilename = reFilename.exec(splitURI[1]) || reFilename.exec(splitURI[2]) || reFilename.exec(splitURI[3]);
 

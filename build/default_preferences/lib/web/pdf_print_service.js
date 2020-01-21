@@ -61,7 +61,7 @@ function PDFPrintService(pdfDocument, pagesOverview, printContainer, l10n) {
 PDFPrintService.prototype = {
   layout() {
     this.throwIfInactive();
-    const body = document.querySelector('body');
+    let body = document.querySelector('body');
     body.setAttribute('data-pdfjsprinting', true);
     let hasEqualPageSizes = this.pagesOverview.every(function (size) {
       return size.width === this.pagesOverview[0].width && size.height === this.pagesOverview[0].height;
@@ -83,8 +83,6 @@ PDFPrintService.prototype = {
     }
 
     this.printContainer.textContent = '';
-    const body = document.querySelector('body');
-    body.removeAttribute('data-pdfjsprinting');
 
     if (this.pageStyleSheet) {
       this.pageStyleSheet.remove();

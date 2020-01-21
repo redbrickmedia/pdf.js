@@ -309,21 +309,9 @@ const LinkTargetStringMap = ['', '_self', '_blank', '_parent', '_top'];
 function addLinkAttributes(link, {
   url,
   target,
-  rel,
-  enabled = true
+  rel
 } = {}) {
-  const urlNullRemoved = url ? (0, _util.removeNullCharacters)(url) : '';
-
-  if (enabled) {
-    link.href = link.title = urlNullRemoved;
-  } else {
-    link.href = '';
-    link.title = `Disabled: ${urlNullRemoved}`;
-
-    link.onclick = () => {
-      return false;
-    };
-  }
+  link.href = link.title = url ? (0, _util.removeNullCharacters)(url) : '';
 
   if (url) {
     const LinkTargetValues = Object.values(LinkTarget);

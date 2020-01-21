@@ -16,10 +16,6 @@ class IPDFLinkService {
 
   set rotation(value) {}
 
-  get externalLinkEnabled() {}
-
-  set externalLinkEnabled(value) {}
-
   navigateTo(dest) {}
 
   getDestinationHash(dest) {}

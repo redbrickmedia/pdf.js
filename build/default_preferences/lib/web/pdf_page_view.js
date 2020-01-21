@@ -45,6 +45,8 @@ class PDFPageView {
     this.renderingState = _pdf_rendering_queue.RenderingStates.INITIAL;
     this.resume = null;
     this.error = null;
+    this.onBeforeDraw = null;
+    this.onAfterDraw = null;
     this.annotationLayer = null;
     this.textLayer = null;
     this.zoomLayer = null;
@@ -162,8 +164,7 @@ class PDFPageView {
       this.eventBus.dispatch('pagerendered', {
         source: this,
         pageNumber: this.id,
-        cssTransform: true,
-        timestamp: performance.now()
+        cssTransform: true
       });
       return;
     }
@@ -184,8 +185,7 @@ class PDFPageView {
         this.eventBus.dispatch('pagerendered', {
           source: this,
           pageNumber: this.id,
-          cssTransform: true,
-          timestamp: performance.now()
+          cssTransform: true
         });
         return;
       }
@@ -383,11 +383,15 @@ class PDFPageView {
 
       this.error = error;
       this.stats = pdfPage.stats;
+
+      if (this.onAfterDraw) {
+        this.onAfterDraw();
+      }
+
       this.eventBus.dispatch('pagerendered', {
         source: this,
         pageNumber: this.id,
-        cssTransform: false,
-        timestamp: performance.now()
+        cssTransform: false
       });
 
       if (error) {
@@ -421,10 +425,11 @@ class PDFPageView {
     }
 
     div.setAttribute('data-loaded', true);
-    this.eventBus.dispatch('pagerender', {
-      source: this,
-      pageNumber: this.id
-    });
+
+    if (this.onBeforeDraw) {
+      this.onBeforeDraw();
+    }
+
     return resultPromise;
   }
 

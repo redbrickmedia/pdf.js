@@ -135,10 +135,6 @@ const defaultOptions = {
     value: false,
     kind: OptionKind.API + OptionKind.PREFERENCE
   },
-  docBaseUrl: {
-    value: '',
-    kind: OptionKind.API
-  },
   isEvalSupported: {
     value: true,
     kind: OptionKind.API

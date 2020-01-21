@@ -313,9 +313,6 @@ class PDFSidebar {
         this.outerContainer.classList.remove('sidebarMoving');
       }
     });
-    this.toggleButton.addEventListener('click', () => {
-      this.toggle();
-    });
     this.thumbnailButton.addEventListener('click', () => {
       this.switchView(SidebarView.THUMBS);
     });

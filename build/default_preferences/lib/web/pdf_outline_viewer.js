@@ -49,8 +49,7 @@ class PDFOutlineViewer {
       (0, _pdf.addLinkAttributes)(element, {
         url,
         target: newWindow ? _pdf.LinkTarget.BLANK : linkService.externalLinkTarget,
-        rel: linkService.externalLinkRel,
-        enabled: linkService.externalLinkEnabled
+        rel: linkService.externalLinkRel
       });
       return;
     }

@@ -11,8 +11,6 @@ var _pdf = require("../pdf");
 
 var _preferences = require("./preferences");
 
-var _ui_utils = require("./ui_utils");
-
 var _app = require("./app");
 
 {
@@ -162,7 +160,7 @@ class MozL10n {
     }
 
     if (type === 'findbarclose') {
-      _app.PDFViewerApplication.eventBus.dispatch(type, {
+      _app.PDFViewerApplication.eventBus.dispatch('findbarclose', {
         source: window
       });
 
@@ -197,12 +195,9 @@ class MozL10n {
       return;
     }
 
-    if (type === 'zoomreset' && _app.PDFViewerApplication.pdfViewer.currentScaleValue === _ui_utils.DEFAULT_SCALE_VALUE) {
-      return;
-    }
-
     _app.PDFViewerApplication.eventBus.dispatch(type, {
-      source: window
+      source: window,
+      ignoreDuplicate: type === 'zoomreset' ? true : undefined
     });
   };
 

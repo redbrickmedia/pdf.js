@@ -225,8 +225,7 @@ class LinkAnnotationElement extends AnnotationElement {
     (0, _display_utils.addLinkAttributes)(link, {
       url: data.url,
       target: data.newWindow ? _display_utils.LinkTarget.BLANK : linkService.externalLinkTarget,
-      rel: linkService.externalLinkRel,
-      enabled: linkService.externalLinkEnabled
+      rel: linkService.externalLinkRel
     });
 
     if (!data.url) {

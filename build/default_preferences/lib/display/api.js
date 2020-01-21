@@ -596,6 +596,7 @@ class PDFPageProxy {
     const intentState = this.intentStates[renderingIntent];
 
     if (!intentState.displayReadyCapability) {
+      intentState.receivingOperatorList = true;
       intentState.displayReadyCapability = (0, _util.createPromiseCapability)();
       intentState.operatorList = {
         fnArray: [],
@@ -604,7 +605,7 @@ class PDFPageProxy {
       };
       stats.time('Page Request');
 
-      this._pumpOperatorList({
+      this._transport.messageHandler.send('RenderPageRequest', {
         pageIndex: this.pageNumber - 1,
         intent: renderingIntent,
         renderInteractiveForms: renderInteractiveForms === true
@@ -626,11 +627,6 @@ class PDFPageProxy {
 
       if (error) {
         internalRenderTask.capability.reject(error);
-
-        this._abortOperatorList({
-          intentState,
-          reason: error
-        });
       } else {
         internalRenderTask.capability.resolve();
       }
@@ -701,6 +697,7 @@ class PDFPageProxy {
     if (!intentState.opListReadCapability) {
       opListTask = {};
       opListTask.operatorListChanged = operatorListChanged;
+      intentState.receivingOperatorList = true;
       intentState.opListReadCapability = (0, _util.createPromiseCapability)();
       intentState.renderTasks = [];
       intentState.renderTasks.push(opListTask);
@@ -712,7 +709,7 @@ class PDFPageProxy {
 
       this._stats.time('Page Request');
 
-      this._pumpOperatorList({
+      this._transport.messageHandler.send('RenderPageRequest', {
         pageIndex: this.pageIndex,
         intent: renderingIntent
       });
@@ -772,25 +769,18 @@ class PDFPageProxy {
     this.destroyed = true;
     this._transport.pageCache[this.pageIndex] = null;
     const waitOn = [];
-    Object.keys(this.intentStates).forEach(intent => {
-      const intentState = this.intentStates[intent];
-
-      this._abortOperatorList({
-        intentState,
-        reason: new Error('Page was destroyed.'),
-        force: true
-      });
-
+    Object.keys(this.intentStates).forEach(function (intent) {
       if (intent === 'oplist') {
         return;
       }
 
+      const intentState = this.intentStates[intent];
       intentState.renderTasks.forEach(function (renderTask) {
         const renderCompleted = renderTask.capability.promise.catch(function () {});
         waitOn.push(renderCompleted);
         renderTask.cancel();
       });
-    });
+    }, this);
     this.objs.clear();
     this.annotationsPromise = null;
     this.pendingCleanup = false;
@@ -806,7 +796,7 @@ class PDFPageProxy {
   _tryCleanup(resetStats = false) {
     if (!this.pendingCleanup || Object.keys(this.intentStates).some(function (intent) {
       const intentState = this.intentStates[intent];
-      return intentState.renderTasks.length !== 0 || !intentState.operatorList.lastChunk;
+      return intentState.renderTasks.length !== 0 || intentState.receivingOperatorList;
     }, this)) {
       return;
     }
@@ -832,7 +822,9 @@ class PDFPageProxy {
     }
   }
 
-  _renderPageChunk(operatorListChunk, intentState) {
+  _renderPageChunk(operatorListChunk, intent) {
+    const intentState = this.intentStates[intent];
+
     for (let i = 0, ii = operatorListChunk.length; i < ii; i++) {
       intentState.operatorList.fnArray.push(operatorListChunk.fnArray[i]);
       intentState.operatorList.argsArray.push(operatorListChunk.argsArray[i]);
@@ -845,87 +837,10 @@ class PDFPageProxy {
     }
 
     if (operatorListChunk.lastChunk) {
+      intentState.receivingOperatorList = false;
+
       this._tryCleanup();
     }
-  }
-
-  _pumpOperatorList(args) {
-    (0, _util.assert)(args.intent, 'PDFPageProxy._pumpOperatorList: Expected "intent" argument.');
-
-    const readableStream = this._transport.messageHandler.sendWithStream('GetOperatorList', args);
-
-    const reader = readableStream.getReader();
-    const intentState = this.intentStates[args.intent];
-    intentState.streamReader = reader;
-
-    const pump = () => {
-      reader.read().then(({
-        value,
-        done
-      }) => {
-        if (done) {
-          intentState.streamReader = null;
-          return;
-        }
-
-        if (this._transport.destroyed) {
-          return;
-        }
-
-        this._renderPageChunk(value.operatorList, intentState);
-
-        pump();
-      }, reason => {
-        intentState.streamReader = null;
-
-        if (this._transport.destroyed) {
-          return;
-        }
-
-        if (intentState.operatorList) {
-          intentState.operatorList.lastChunk = true;
-
-          for (let i = 0; i < intentState.renderTasks.length; i++) {
-            intentState.renderTasks[i].operatorListChanged();
-          }
-
-          this._tryCleanup();
-        }
-
-        if (intentState.displayReadyCapability) {
-          intentState.displayReadyCapability.reject(reason);
-        } else if (intentState.opListReadCapability) {
-          intentState.opListReadCapability.reject(reason);
-        } else {
-          throw reason;
-        }
-      });
-    };
-
-    pump();
-  }
-
-  _abortOperatorList({
-    intentState,
-    reason,
-    force = false
-  }) {
-    (0, _util.assert)(reason instanceof Error, 'PDFPageProxy._abortOperatorList: Expected "reason" argument.');
-
-    if (!intentState.streamReader) {
-      return;
-    }
-
-    if (!force && intentState.renderTasks.length !== 0) {
-      return;
-    }
-
-    if (reason instanceof _display_utils.RenderingCancelledException) {
-      return;
-    }
-
-    intentState.streamReader.cancel(new _util.AbortException(reason && reason.message));
-    intentState.streamReader = null;
   }
 
   get stats() {
@@ -1356,7 +1271,7 @@ class WorkerTransport {
       this.fontLoader.clear();
 
       if (this._networkStream) {
-        this._networkStream.cancelAllRequests(new _util.AbortException('Worker was terminated.'));
+        this._networkStream.cancelAllRequests();
       }
 
       if (this.messageHandler) {
@@ -1528,6 +1443,15 @@ class WorkerTransport {
 
       page._startRenderPage(data.transparency, data.intent);
     }, this);
+    messageHandler.on('RenderPageChunk', function (data) {
+      if (this.destroyed) {
+        return;
+      }
+
+      const page = this.pageCache[data.pageIndex];
+
+      page._renderPageChunk(data.operatorList, data.intent);
+    }, this);
     messageHandler.on('commonobj', function (data) {
       if (this.destroyed) {
         return;
@@ -1645,6 +1569,28 @@ class WorkerTransport {
           loaded: data.loaded,
           total: data.total
         });
+      }
+    }, this);
+    messageHandler.on('PageError', function (data) {
+      if (this.destroyed) {
+        return;
+      }
+
+      const page = this.pageCache[data.pageIndex];
+      const intentState = page.intentStates[data.intent];
+
+      if (intentState.displayReadyCapability) {
+        intentState.displayReadyCapability.reject(new Error(data.error));
+      } else {
+        throw new Error(data.error);
+      }
+
+      if (intentState.operatorList) {
+        intentState.operatorList.lastChunk = true;
+
+        for (let i = 0; i < intentState.renderTasks.length; i++) {
+          intentState.renderTasks[i].operatorListChanged();
+        }
       }
     }, this);
     messageHandler.on('UnsupportedFeature', this._onUnsupportedFeature, this);

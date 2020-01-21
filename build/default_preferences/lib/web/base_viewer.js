@@ -105,7 +105,6 @@ class BaseViewer {
 
     this.scroll = (0, _ui_utils.watchScroll)(this.container, this._scrollUpdate.bind(this));
     this.presentationModeState = _ui_utils.PresentationModeState.UNKNOWN;
-    this._onBeforeDraw = this._onAfterDraw = null;
 
     this._resetView();
 
@@ -302,32 +301,21 @@ class BaseViewer {
     });
     const onePageRenderedCapability = (0, _pdf.createPromiseCapability)();
     this.onePageRendered = onePageRenderedCapability.promise;
-    const firstPagePromise = pdfDocument.getPage(1);
+
+    let bindOnAfterAndBeforeDraw = pageView => {
+      pageView.onBeforeDraw = () => {
+        this._buffer.push(pageView);
+      };
+
+      pageView.onAfterDraw = () => {
+        if (!onePageRenderedCapability.settled) {
+          onePageRenderedCapability.resolve();
+        }
+      };
+    };
+
+    let firstPagePromise = pdfDocument.getPage(1);
     this.firstPagePromise = firstPagePromise;
-
-    this._onBeforeDraw = evt => {
-      const pageView = this._pages[evt.pageNumber - 1];
-
-      if (!pageView) {
-        return;
-      }
-
-      this._buffer.push(pageView);
-    };
-
-    this.eventBus.on('pagerender', this._onBeforeDraw);
-
-    this._onAfterDraw = evt => {
-      if (evt.cssTransform || onePageRenderedCapability.settled) {
-        return;
-      }
-
-      onePageRenderedCapability.resolve();
-      this.eventBus.off('pagerendered', this._onAfterDraw);
-      this._onAfterDraw = null;
-    };
-
-    this.eventBus.on('pagerendered', this._onAfterDraw);
     firstPagePromise.then(pdfPage => {
       let scale = this.currentScale;
       let viewport = pdfPage.getViewport({
@@ -359,6 +347,7 @@ class BaseViewer {
           maxCanvasPixels: this.maxCanvasPixels,
           l10n: this.l10n
         });
+        bindOnAfterAndBeforeDraw(pageView);
 
         this._pages.push(pageView);
       }
@@ -447,17 +436,6 @@ class BaseViewer {
     this._pageViewsReady = false;
     this._scrollMode = _ui_utils.ScrollMode.VERTICAL;
     this._spreadMode = _ui_utils.SpreadMode.NONE;
-
-    if (this._onBeforeDraw) {
-      this.eventBus.off('pagerender', this._onBeforeDraw);
-      this._onBeforeDraw = null;
-    }
-
-    if (this._onAfterDraw) {
-      this.eventBus.off('pagerendered', this._onAfterDraw);
-      this._onAfterDraw = null;
-    }
-
     this.viewer.textContent = '';
 
     this._updateScrollMode();

@@ -187,11 +187,11 @@ if (!globalScope._pdfjsCompatibilityChecked) {
   })();
 
   (function checkStringCodePointAt() {
-    if (String.prototype.codePointAt) {
+    if (String.codePointAt) {
       return;
     }
 
-    require('core-js/fn/string/code-point-at');
+    String.codePointAt = require('core-js/fn/string/code-point-at');
   })();
 
   (function checkStringFromCodePoint() {
